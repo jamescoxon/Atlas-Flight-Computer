@@ -8,6 +8,9 @@ OneWire ds(9); // DS18x20 Temperature chip i/o One-wire
 #define BAUD_RATE 20150     // 10000 = 100 BAUD 20150
 #define SERIAL_SPEED 9600
 
+//GPIO pin definitions
+int en = 8, tx0 = 3, tx1 = 4, led = 13, pump_relay = 12;
+
 int count = 0, nogps_count = 0;
 float flat, flon, falt;
 unsigned long fix_age, date, time, chars, age;
@@ -20,15 +23,13 @@ long int  ialt = 123;
 int numbersats;
 
 //Ascent rate variables
-int last_alt;
 long int currenttime, ARtime = 0, Floatstart, float_time = 0, total_float_time;
 float ascentrate;
-int Float_rollover_time = 0, atfloat = 0;
-int descent_detection = 10, too_low = 0;
+int Float_rollover_time = 0, atfloat = 0, last_alt, descent_detection = 10, too_low = 0;
 
 //Tempsensor variables
-byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 GPS Sensor
-byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // Internal DS18B20 Pump Sensor
+byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 Temp Sensor
+byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // External DS18B20 Temp Sensor
 
 int temp0 = 0, temp1 = 0; 
 
@@ -88,16 +89,16 @@ void rtty_txbit (int bit)
 		if (bit)
 		{
 		  // high
-                    digitalWrite(4, HIGH);
-                    digitalWrite(3, LOW);
-                    digitalWrite(13, LOW); //LED  
+                    digitalWrite(tx1, HIGH);
+                    digitalWrite(tx0, LOW);
+                    digitalWrite(led, LOW); //LED  
 		}
 		else
 		{
 		  // low
-                    digitalWrite(3, HIGH);
-                    digitalWrite(4, LOW);
-                    digitalWrite(13, HIGH); //LED
+                    digitalWrite(tx0, HIGH);
+                    digitalWrite(tx1, LOW);
+                    digitalWrite(led, HIGH); //LED
 		}
 		delayMicroseconds(BAUD_RATE); 
 }
@@ -317,12 +318,12 @@ void startBallast() {
   //Attach interrupt and start counting
   attachInterrupt(0, counter, RISING);
   //Start dumping ballast turn on pump
-  digitalWrite(12, HIGH);
+  digitalWrite(pump_relay, HIGH);
 }
 
 void stopBallast() {
   //Stop pump
-  digitalWrite(12, LOW);
+  digitalWrite(pump_relay, LOW);
   //Disconnect interrupt
   detachInterrupt(0);
   ballastmode = 0;
@@ -346,11 +347,11 @@ void counter()
 
 void setup()
 {
-  pinMode(8, OUTPUT); //EN
-  pinMode(3, OUTPUT); //Tx
-  pinMode(4, OUTPUT); //Tx
-  pinMode(13, OUTPUT); //LED
-  pinMode(12, OUTPUT); //Pump Relay
+  pinMode(en, OUTPUT); //EN
+  pinMode(tx0, OUTPUT); //Tx
+  pinMode(tx1, OUTPUT); //Tx
+  pinMode(led, OUTPUT); //LED
+  pinMode(pump_relay, OUTPUT); //Pump Relay
   Serial.begin(SERIAL_SPEED);
   //Turning off all GPS NMEA strings apart from GPGGA on the uBlox modules
   Serial.print("$PUBX,40,GLL,0,0,0,0*5C\r\n");
@@ -359,13 +360,13 @@ void setup()
   Serial.print("$PUBX,40,GSV,0,0,0,0*59\r\n");
   Serial.print("$PUBX,40,GSA,0,0,0,0*4E\r\n");
   //
-  digitalWrite(13, HIGH);
-  digitalWrite(8, HIGH);
-  digitalWrite(12, HIGH);
+  digitalWrite(led, HIGH);
+  digitalWrite(en, HIGH);
+  digitalWrite(pump_relay, HIGH);
   delay(2000);
   Serial.println("Starting Up...");
-  digitalWrite(12, LOW);
-  digitalWrite(13, LOW);
+  digitalWrite(pump_relay, LOW);
+  digitalWrite(led, LOW);
 }
 
 void loop()
@@ -504,10 +505,10 @@ void loop()
   delay(10);
   // Turns LED on if we have got more then 1 sat - good way to make sure that everything is working without attaching to the serial port
   if (numbersats > 0 && numbersats != 99) {
-    digitalWrite(13, HIGH);
+    digitalWrite(led, HIGH);
   }
   else {
-    digitalWrite(13, LOW);
+    digitalWrite(led, LOW);
   }
   if (nogps_count > 1000) {
     temp0 = getTempdata(address1);
