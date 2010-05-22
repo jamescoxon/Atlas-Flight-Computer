@@ -16,11 +16,9 @@ float flat, flon, falt;
 unsigned long fix_age, date, time, chars, age;
 unsigned short sentences, failed_checksum, failed;
 
-int hour, minute, second;
+int hour, minute, second, lat_deg, lat_min, cutdown = 0, numbersats;
 char latbuf[12], lonbuf[12], ascentratebuf[12], ialtbuf[10];
-int lat_deg, lat_min, cutdown = 0;
-long int  ialt = 123;
-int numbersats;
+long int ialt = 123;
 
 //Ascent rate variables
 long int currenttime, ARtime = 0, Floatstart, float_time = 0, total_float_time;
@@ -30,7 +28,6 @@ int Float_rollover_time = 0, atfloat = 0, last_alt, descent_detection = 10, too_
 //Tempsensor variables
 byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 Temp Sensor
 byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // External DS18B20 Temp Sensor
-
 int temp0 = 0, temp1 = 0; 
 
 //Photocell Data
