@@ -1,0 +1,8 @@
+Atlas Flight Computer
+
+James Coxon (M6JCX)
+
+This is the code that is used on the Atlas flight computer, an arduino based board used in high altitude ballooning.
+The flight computer is currently being used for the BallastHalo missions - an attempt to develop a ballast system that maybe used on trans-atlantic flights, currently it is used on latex pinhole floaters
+
+More info can be found at http://www.pegasushabproject.org.uk
