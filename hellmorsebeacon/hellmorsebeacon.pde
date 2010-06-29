@@ -3,7 +3,9 @@ int ledPin =  7;    // red led connected to digital pin 6
 int txPin = 3; // radio tx line
 int radioPin = 4; //radio En line
 
-int loopcount = 0, cycle = 0, j, q;
+int loopcount = 0, cycle = 0, j, q, n, totalloop = 0;
+
+char superbuffer [120];
 
 
 struct t_mtab { char c, pat; } ;
@@ -98,7 +100,8 @@ struct t_htab helltab[] = {
   {'Y', { B00000100, B00001000, B01110000, B00001000, B00000100 } },
   {'Z', { B01000100, B01100100, B01010100, B01001100, B01100100 } },
   {'.', { B01000000, B01000000, B00000000, B00000000, B00000000 } },
-  {',', { B10000000, B10100000, B01100000, B00000000, B00000000 } }
+  {',', { B10000000, B10100000, B01100000, B00000000, B00000000 } },
+  {'/', { B01000000, B00100000, B00010000, B00001000, B00000100 } }
 
 };
 
@@ -107,7 +110,8 @@ struct t_htab helltab[] = {
 void helldelay()
 {
   delay(8);
-  delayMicroseconds(163);
+  //delayMicroseconds(900);
+  //delayMicroseconds(163);
 }
 
 
@@ -243,27 +247,36 @@ if (loopcount < 4) {
   case 1:
     digitalWrite(radioPin, HIGH);
     delay(1000);
-    sendmsg("VVVVV,ATLAS,1/3,HIGH,ALTITUDE,BALLOON");
-    delay(1000);
-    hellsendmsg("VVVVV,ATLAS,1,HIGH,ALTITUDE,BALLOON");
+    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,1/3,HIGH,ALTITUDE,BALLOON", totalloop);
+    if (n > -1){
+      sendmsg(superbuffer);
+      delay(1000);
+      hellsendmsg(superbuffer);
+    }
     digitalWrite(radioPin, LOW);
     delay(60000);
     break;
   case 2:
     digitalWrite(radioPin, HIGH);
     delay(1000);
-    sendmsg("VVVVV,ATLAS,2/3,RTTY,434.075,ASCII8,50,350,0,1.5");
-    delay(1000);
-    hellsendmsg("VVVVV,ATLAS,2,RTTY,434.075,ASCII8,50,350,0,1.5");
+    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,2/3,RTTY,434.075,ASCII8,50,350,0,1.5", totalloop);
+    if (n > -1){
+      sendmsg(superbuffer);
+      delay(1000);
+      hellsendmsg(superbuffer);
+    }
     digitalWrite(radioPin, LOW);
     delay(60000);
     break;
   case 3:
     digitalWrite(radioPin, HIGH);
     delay(1000);
-    sendmsg("VVVVV,ATLAS,3/3,WWW.SPACENEAR.US/TRACKER/");
-    delay(1000);
-    hellsendmsg("VVVVV,ATLAS,3,M6JCX,M6JCX,M6JCX");
+    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,3/3,WWW.SPACENEAR.US/TRACKER/", totalloop);
+    if (n > -1){
+      sendmsg(superbuffer);
+      delay(1000);
+      hellsendmsg(superbuffer);
+    }
     digitalWrite(radioPin, LOW);
     delay(60000);
     break;
@@ -271,6 +284,7 @@ if (loopcount < 4) {
 }
 else if (loopcount > 3) {
     loopcount = 0;
+    totalloop++;
     delay(900000);
   }
 }

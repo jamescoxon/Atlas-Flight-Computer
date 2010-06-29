@@ -342,6 +342,15 @@ void counter()
   pumpCount++;
 }
 
+// Send a byte array of UBX protocol to the GPS
+void sendUBX(uint8_t *MSG, uint8_t len) {
+	for(int i=0; i<len; i++) {
+		Serial.print(MSG[i], BYTE);
+		Serial.print(MSG[i], HEX);
+	}
+	Serial.println();
+}
+
 void setup()
 {
   pinMode(en, OUTPUT); //EN
@@ -356,6 +365,12 @@ void setup()
   Serial.print("$PUBX,40,VTG,0,0,0,0*5E\r\n");
   Serial.print("$PUBX,40,GSV,0,0,0,0*59\r\n");
   Serial.print("$PUBX,40,GSA,0,0,0,0*4E\r\n");
+  
+  // Set the navigation mode (Airborne, 1G)
+  //Serial.print("Setting uBlox nav mode: ");
+  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+
   //
   digitalWrite(led, HIGH);
   digitalWrite(en, HIGH);

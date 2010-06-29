@@ -12,6 +12,7 @@ void startBallast();
 void stopBallast();
 void lightsensor();
 void counter();
+void sendUBX(uint8_t *MSG, uint8_t len);
 void setup();
 void loop();
 TinyGPS gps;
@@ -23,28 +24,26 @@ OneWire ds(9); // DS18x20 Temperature chip i/o One-wire
 #define BAUD_RATE 20150     // 10000 = 100 BAUD 20150
 #define SERIAL_SPEED 9600
 
+//GPIO pin definitions
+int en = 8, tx0 = 3, tx1 = 4, led = 13, pump_relay = 12;
+
 int count = 0, nogps_count = 0;
 float flat, flon, falt;
 unsigned long fix_age, date, time, chars, age;
 unsigned short sentences, failed_checksum, failed;
 
-int hour, minute, second;
+int hour, minute, second, lat_deg, lat_min, cutdown = 0, numbersats;
 char latbuf[12], lonbuf[12], ascentratebuf[12], ialtbuf[10];
-int lat_deg, lat_min, cutdown = 0;
-long int  ialt = 123;
-int numbersats;
+long int ialt = 123;
 
 //Ascent rate variables
-int last_alt;
 long int currenttime, ARtime = 0, Floatstart, float_time = 0, total_float_time;
 float ascentrate;
-int Float_rollover_time = 0, atfloat = 0;
-int descent_detection = 10, too_low = 0;
+int Float_rollover_time = 0, atfloat = 0, last_alt, descent_detection = 10, too_low = 0;
 
 //Tempsensor variables
-byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 GPS Sensor
-byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // Internal DS18B20 Pump Sensor
-
+byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 Temp Sensor
+byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // External DS18B20 Temp Sensor
 int temp0 = 0, temp1 = 0; 
 
 //Photocell Data
@@ -103,16 +102,16 @@ void rtty_txbit (int bit)
 		if (bit)
 		{
 		  // high
-                    digitalWrite(4, HIGH);
-                    digitalWrite(3, LOW);
-                    digitalWrite(13, LOW); //LED  
+                    digitalWrite(tx1, HIGH);
+                    digitalWrite(tx0, LOW);
+                    digitalWrite(led, LOW); //LED  
 		}
 		else
 		{
 		  // low
-                    digitalWrite(3, HIGH);
-                    digitalWrite(4, LOW);
-                    digitalWrite(13, HIGH); //LED
+                    digitalWrite(tx0, HIGH);
+                    digitalWrite(tx1, LOW);
+                    digitalWrite(led, HIGH); //LED
 		}
 		delayMicroseconds(BAUD_RATE); 
 }
@@ -250,14 +249,14 @@ void calc_ascentrate() {
 	if(currenttime > ARtime) {
 	  diff_sec = currenttime - ARtime;
 	  diff_alt = ialt - last_alt;
-	  Serial.print("Diff sec = ");
-          Serial.print(diff_sec);
-          Serial.print(", Diff alt = ");
-          Serial.println(diff_alt);
+	  //Serial.print("Diff sec = ");
+          //Serial.print(diff_sec);
+          //Serial.print(", Diff alt = ");
+          //Serial.println(diff_alt);
 	  if (diff_sec > 60) {
 		ascentrate = (float) diff_alt / diff_sec;
-		Serial.print("Ascentrate: ");
-                Serial.println(ascentrate);
+		//Serial.print("Ascentrate: ");
+                //Serial.println(ascentrate);
 		ARtime = currenttime;
 		last_alt = ialt;
 	  }
@@ -266,8 +265,8 @@ void calc_ascentrate() {
 	  ARtime = currenttime;
 	  last_alt = ialt;
 	}
-	  Serial.print("Time: ");
-          Serial.println(currenttime);
+	  //Serial.print("Time: ");
+          //Serial.println(currenttime);
   }
 }
 
@@ -276,7 +275,7 @@ void floatdetection()
 	//Calculate if we have achieved float, monitor ascentrate if between +1 and -1 start float time if it strays out of +1 or -1 for more then 5 cycles - float has stopped
 	//Detect float
 	if (ascentrate < 1 && ascentrate > -1 && ialt > 15000) {
-	Serial.print("Floating... ");
+	//Serial.print("Floating... ");
 	//Now that we are at float we need to keep track of how long
 	if (currenttime >= Floatstart) {
 		//Start Timer or Continue Timer
@@ -284,25 +283,25 @@ void floatdetection()
 			Floatstart = currenttime;
 			atfloat = 10;
 			float_time = 1 ;
-			Serial.print("Start float timer ");
-                        Serial.println(atfloat);
+			//Serial.print("Start float timer ");
+                        //Serial.println(atfloat);
 			}
 		else {
 			atfloat = 10;
 			float_time = (long) currenttime - Floatstart;
 			total_float_time = (long)float_time + Float_rollover_time;
-			Serial.print("Float Time: ");
-                        Serial.print(total_float_time);
-                        Serial.print(" ");
-                        Serial.println(atfloat);
+			//Serial.print("Float Time: ");
+                        //Serial.print(total_float_time);
+                        //Serial.print(" ");
+                        //Serial.println(atfloat);
 		}
 	}
 	else if (currenttime < Floatstart) {
 		atfloat = 10;
 		//We must have rolled over 24hrs
 		Float_rollover_time = float_time;
-		Serial.print("Rollover: ");
-                Serial.println(Float_rollover_time);
+		//Serial.print("Rollover: ");
+                //Serial.println(Float_rollover_time);
 		Floatstart = currenttime;
 	}
 	}
@@ -314,17 +313,17 @@ void floatdetection()
 			//in case this is just a blip continue float counter until we run out
 			float_time = currenttime - Floatstart;
 			total_float_time = float_time + Float_rollover_time;
-			Serial.print("Float Time: ");
-                        Serial.print(total_float_time);
-                        Serial.print(" ");
-                        Serial.println(atfloat);
+			//Serial.print("Float Time: ");
+                        //Serial.print(total_float_time);
+                        //Serial.print(" ");
+                        //Serial.println(atfloat);
 			}
 		else {
 		float_time = 0;
                 total_float_time = 0;
 		}
-		Serial.print("No Float: ");
-                Serial.println(atfloat);
+		//Serial.print("No Float: ");
+                //Serial.println(atfloat);
 	}
 }
 
@@ -332,12 +331,12 @@ void startBallast() {
   //Attach interrupt and start counting
   attachInterrupt(0, counter, RISING);
   //Start dumping ballast turn on pump
-  digitalWrite(12, HIGH);
+  digitalWrite(pump_relay, HIGH);
 }
 
 void stopBallast() {
   //Stop pump
-  digitalWrite(12, LOW);
+  digitalWrite(pump_relay, LOW);
   //Disconnect interrupt
   detachInterrupt(0);
   ballastmode = 0;
@@ -359,13 +358,22 @@ void counter()
   pumpCount++;
 }
 
+// Send a byte array of UBX protocol to the GPS
+void sendUBX(uint8_t *MSG, uint8_t len) {
+	for(int i=0; i<len; i++) {
+		Serial.print(MSG[i], BYTE);
+		Serial.print(MSG[i], HEX);
+	}
+	Serial.println();
+}
+
 void setup()
 {
-  pinMode(8, OUTPUT); //EN
-  pinMode(3, OUTPUT); //Tx
-  pinMode(4, OUTPUT); //Tx
-  pinMode(13, OUTPUT); //LED
-  pinMode(12, OUTPUT); //Pump Relay
+  pinMode(en, OUTPUT); //EN
+  pinMode(tx0, OUTPUT); //Tx
+  pinMode(tx1, OUTPUT); //Tx
+  pinMode(led, OUTPUT); //LED
+  pinMode(pump_relay, OUTPUT); //Pump Relay
   Serial.begin(SERIAL_SPEED);
   //Turning off all GPS NMEA strings apart from GPGGA on the uBlox modules
   Serial.print("$PUBX,40,GLL,0,0,0,0*5C\r\n");
@@ -373,14 +381,20 @@ void setup()
   Serial.print("$PUBX,40,VTG,0,0,0,0*5E\r\n");
   Serial.print("$PUBX,40,GSV,0,0,0,0*59\r\n");
   Serial.print("$PUBX,40,GSA,0,0,0,0*4E\r\n");
+  
+  // Set the navigation mode (Airborne, 1G)
+  //Serial.print("Setting uBlox nav mode: ");
+  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+
   //
-  digitalWrite(13, HIGH);
-  digitalWrite(8, HIGH);
-  digitalWrite(12, HIGH);
+  digitalWrite(led, HIGH);
+  digitalWrite(en, HIGH);
+  digitalWrite(pump_relay, HIGH);
   delay(2000);
-  Serial.println("Starting Up...");
-  digitalWrite(12, LOW);
-  digitalWrite(13, LOW);
+  //Serial.println("Starting Up...");
+  digitalWrite(pump_relay, LOW);
+  digitalWrite(led, LOW);
 }
 
 void loop()
@@ -392,7 +406,7 @@ void loop()
     {
       // retrieves +/- lat/long in 100000ths of a degree
       if (fix_age == TinyGPS::GPS_INVALID_AGE) {
-          //Serial.println("No fix detected");
+          ////Serial.println("No fix detected");
       }
       else {
         //Get Data from GPS library
@@ -471,7 +485,7 @@ void loop()
             pumpMls = (float) pumpCount * 0.26; //
             //Total up ballast this dump
             thisDumpMls = thisDumpMls + (int) pumpMls;
-            Serial.print(pumpCount); Serial.print(",");Serial.print(pumpMls); Serial.print(","); Serial.println(thisDumpMls);
+            //Serial.print(pumpCount); //Serial.print(",");//Serial.print(pumpMls); //Serial.print(","); //Serial.println(thisDumpMls);
             pumpCount = 0; //Zeroing counter
           //Should we stop dumping ballast?
           if(ballastmode == 4) {
@@ -507,7 +521,7 @@ void loop()
           n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
           n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
           rtty_txstring(superbuffer);
-          Serial.println(superbuffer);
+          //Serial.println(superbuffer);
         }
         count++;
         delay(100);
@@ -519,10 +533,10 @@ void loop()
   delay(10);
   // Turns LED on if we have got more then 1 sat - good way to make sure that everything is working without attaching to the serial port
   if (numbersats > 0 && numbersats != 99) {
-    digitalWrite(13, HIGH);
+    digitalWrite(led, HIGH);
   }
   else {
-    digitalWrite(13, LOW);
+    digitalWrite(led, LOW);
   }
   if (nogps_count > 1000) {
     temp0 = getTempdata(address1);
@@ -538,7 +552,7 @@ void loop()
         n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
         n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
         rtty_txstring(superbuffer);
-        Serial.println(superbuffer);
+        //Serial.println(superbuffer);
       }
       nogps_ballast = 0;
     }
@@ -548,12 +562,12 @@ void loop()
             n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
             n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
             rtty_txstring(superbuffer);
-            Serial.println(superbuffer);
+            //Serial.println(superbuffer);
       }
     }
     nogps_count = 0;
     nogps_ballast++;
-    Serial.println(nogps_ballast);
+    //Serial.println(nogps_ballast);
   }
 }
 
