@@ -26,7 +26,7 @@ float ascentrate;
 int Float_rollover_time = 0, atfloat = 0, last_alt, descent_detection = 10, too_low = 0;
 
 //Tempsensor variables
-byte address1[8] = {0x28, 0x26, 0xF5, 0x2D, 0x2, 0x0, 0x0, 0xCC}; // Internal DS18B20 Temp Sensor
+byte address1[8] = {0x28, 0x2D, 0x28, 0x2E, 0x2, 0x0, 0x0, 0xE}; // Internal DS18B20 Temp Sensor
 byte address2[8] = {0x28, 0x5D, 0x26, 0x2E, 0x2, 0x0, 0x0, 0x34}; // External DS18B20 Temp Sensor
 int temp0 = 0, temp1 = 0; 
 
@@ -233,14 +233,14 @@ void calc_ascentrate() {
 	if(currenttime > ARtime) {
 	  diff_sec = currenttime - ARtime;
 	  diff_alt = ialt - last_alt;
-	  //Serial.print("Diff sec = ");
-          //Serial.print(diff_sec);
-          //Serial.print(", Diff alt = ");
-          //Serial.println(diff_alt);
+	  Serial.print("Diff sec = ");
+          Serial.print(diff_sec);
+          Serial.print(", Diff alt = ");
+          Serial.println(diff_alt);
 	  if (diff_sec > 60) {
 		ascentrate = (float) diff_alt / diff_sec;
-		//Serial.print("Ascentrate: ");
-                //Serial.println(ascentrate);
+		Serial.print("Ascentrate: ");
+                Serial.println(ascentrate);
 		ARtime = currenttime;
 		last_alt = ialt;
 	  }
@@ -249,8 +249,8 @@ void calc_ascentrate() {
 	  ARtime = currenttime;
 	  last_alt = ialt;
 	}
-	  //Serial.print("Time: ");
-          //Serial.println(currenttime);
+	  Serial.print("Time: ");
+          Serial.println(currenttime);
   }
 }
 
@@ -259,33 +259,33 @@ void floatdetection()
 	//Calculate if we have achieved float, monitor ascentrate if between +1 and -1 start float time if it strays out of +1 or -1 for more then 5 cycles - float has stopped
 	//Detect float
 	if (ascentrate < 1 && ascentrate > -1 && ialt > 15000) {
-	//Serial.print("Floating... ");
+	Serial.print("Floating... ");
 	//Now that we are at float we need to keep track of how long
-	if (currenttime >= Floatstart) {
+	  if (currenttime >= Floatstart) {
 		//Start Timer or Continue Timer
 		if(float_time == 0) {
 			Floatstart = currenttime;
 			atfloat = 10;
 			float_time = 1 ;
-			//Serial.print("Start float timer ");
-                        //Serial.println(atfloat);
+			Serial.print("Start float timer ");
+                        Serial.println(atfloat);
 			}
 		else {
 			atfloat = 10;
 			float_time = (long) currenttime - Floatstart;
 			total_float_time = (long)float_time + Float_rollover_time;
-			//Serial.print("Float Time: ");
-                        //Serial.print(total_float_time);
-                        //Serial.print(" ");
-                        //Serial.println(atfloat);
+			Serial.print("Float Time: ");
+                        Serial.print(total_float_time);
+                        Serial.print(" ");
+                        Serial.println(atfloat);
 		}
 	}
-	else if (currenttime < Floatstart) {
+	  else if (currenttime < Floatstart) {
 		atfloat = 10;
 		//We must have rolled over 24hrs
 		Float_rollover_time = float_time;
-		//Serial.print("Rollover: ");
-                //Serial.println(Float_rollover_time);
+		Serial.print("Rollover: ");
+                Serial.println(Float_rollover_time);
 		Floatstart = currenttime;
 	}
 	}
@@ -297,17 +297,17 @@ void floatdetection()
 			//in case this is just a blip continue float counter until we run out
 			float_time = currenttime - Floatstart;
 			total_float_time = float_time + Float_rollover_time;
-			//Serial.print("Float Time: ");
-                        //Serial.print(total_float_time);
-                        //Serial.print(" ");
-                        //Serial.println(atfloat);
+			Serial.print("Float Time: ");
+                        Serial.print(total_float_time);
+                        Serial.print(" ");
+                        Serial.println(atfloat);
 			}
 		else {
-		float_time = 0;
-                total_float_time = 0;
+		  float_time = 0;
+                  total_float_time = 0;
 		}
-		//Serial.print("No Float: ");
-                //Serial.println(atfloat);
+		Serial.print("No Float: ");
+                Serial.println(atfloat);
 	}
 }
 
@@ -344,11 +344,11 @@ void counter()
 
 // Send a byte array of UBX protocol to the GPS
 void sendUBX(uint8_t *MSG, uint8_t len) {
-	for(int i=0; i<len; i++) {
-		Serial.print(MSG[i], BYTE);
-		Serial.print(MSG[i], HEX);
-	}
-	Serial.println();
+  for(int i=0; i<len; i++) {
+    Serial.print(MSG[i], BYTE);
+    Serial.print(MSG[i], HEX);
+  }
+  Serial.println();
 }
 
 void setup()
@@ -359,24 +359,25 @@ void setup()
   pinMode(led, OUTPUT); //LED
   pinMode(pump_relay, OUTPUT); //Pump Relay
   Serial.begin(SERIAL_SPEED);
+  
+  // Set the navigation mode (Airborne, 1G)
+  Serial.print("Setting uBlox nav mode: ");
+  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+  
   //Turning off all GPS NMEA strings apart from GPGGA on the uBlox modules
   Serial.print("$PUBX,40,GLL,0,0,0,0*5C\r\n");
   Serial.print("$PUBX,40,ZDA,0,0,0,0*44\r\n");
   Serial.print("$PUBX,40,VTG,0,0,0,0*5E\r\n");
   Serial.print("$PUBX,40,GSV,0,0,0,0*59\r\n");
   Serial.print("$PUBX,40,GSA,0,0,0,0*4E\r\n");
-  
-  // Set the navigation mode (Airborne, 1G)
-  //Serial.print("Setting uBlox nav mode: ");
-  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
-  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
 
   //
   digitalWrite(led, HIGH);
   digitalWrite(en, HIGH);
   digitalWrite(pump_relay, HIGH);
   delay(2000);
-  //Serial.println("Starting Up...");
+  Serial.println("Starting Up...");
   digitalWrite(pump_relay, LOW);
   digitalWrite(led, LOW);
 }
@@ -390,7 +391,7 @@ void loop()
     {
       // retrieves +/- lat/long in 100000ths of a degree
       if (fix_age == TinyGPS::GPS_INVALID_AGE) {
-          ////Serial.println("No fix detected");
+          //Serial.println("No fix detected");
       }
       else {
         //Get Data from GPS library
@@ -469,7 +470,7 @@ void loop()
             pumpMls = (float) pumpCount * 0.26; //
             //Total up ballast this dump
             thisDumpMls = thisDumpMls + (int) pumpMls;
-            //Serial.print(pumpCount); //Serial.print(",");//Serial.print(pumpMls); //Serial.print(","); //Serial.println(thisDumpMls);
+            Serial.print(pumpCount); Serial.print(",");Serial.print(pumpMls); Serial.print(","); Serial.println(thisDumpMls);
             pumpCount = 0; //Zeroing counter
           //Should we stop dumping ballast?
           if(ballastmode == 4) {
@@ -505,7 +506,7 @@ void loop()
           n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
           n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
           rtty_txstring(superbuffer);
-          //Serial.println(superbuffer);
+          Serial.println(superbuffer);
         }
         count++;
         delay(100);
@@ -536,7 +537,7 @@ void loop()
         n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
         n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
         rtty_txstring(superbuffer);
-        //Serial.println(superbuffer);
+        Serial.println(superbuffer);
       }
       nogps_ballast = 0;
     }
@@ -546,11 +547,11 @@ void loop()
             n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
             n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
             rtty_txstring(superbuffer);
-            //Serial.println(superbuffer);
+            Serial.println(superbuffer);
       }
     }
     nogps_count = 0;
     nogps_ballast++;
-    //Serial.println(nogps_ballast);
+    Serial.println(nogps_ballast);
   }
 }
