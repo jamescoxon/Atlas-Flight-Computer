@@ -11,10 +11,12 @@ OneWire ds(9); // DS18x20 Temperature chip i/o One-wire
 //GPIO pin definitions
 int en = 8, tx0 = 3, tx1 = 4, led = 13, pump_relay = 12;
 
-int count = 0, nogps_count = 0;
+int count = 0, nogps_count = 0, gpsairborne = 0;
 float flat, flon, falt;
 unsigned long fix_age, date, time, chars, age;
 unsigned short sentences, failed_checksum, failed;
+uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
+  
 
 int hour, minute, second, lat_deg, lat_min, cutdown = 0, numbersats;
 char latbuf[12], lonbuf[12], ascentratebuf[12], ialtbuf[10];
@@ -346,9 +348,52 @@ void counter()
 void sendUBX(uint8_t *MSG, uint8_t len) {
   for(int i=0; i<len; i++) {
     Serial.print(MSG[i], BYTE);
-    Serial.print(MSG[i], HEX);
   }
   Serial.println();
+}
+
+// Get the current NAV5 mode
+int getUBXNAV5() {
+
+	uint8_t b;
+	uint8_t byteID = 0;
+	int startTime = millis();
+
+	// Poll/query message
+	uint8_t getNAV5[] = { 0xB5, 0x62, 0x06, 0x24, 0x00, 0x00, 0x2A, 0x84 };
+	
+	// First few bytes of the poll response
+	uint8_t response[] = { 0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF};
+	
+	// Interrogate Mr GPS...
+	sendUBX(getNAV5, sizeof(getNAV5)/sizeof(uint8_t));
+	
+	// Process his response...
+	while (1) {
+		
+		// Timeout if no valid response in 3 seconds
+		if (millis() - startTime > 3000) { 
+			return -1;
+		}
+
+		// Make sure data is available to read
+		if (Serial.available()) {
+			b = Serial.read();
+
+			// 8th byte is the nav mode
+			if (byteID == 8) {
+				return b;
+			} 
+			// Make sure the response matches the expected preamble
+			else if (b == response[byteID]) { 
+				byteID++;
+			} else {
+				byteID = 0;	// Reset and look again, invalid order
+			}
+			 
+		}
+	}
+
 }
 
 void setup()
@@ -359,22 +404,31 @@ void setup()
   pinMode(led, OUTPUT); //LED
   pinMode(pump_relay, OUTPUT); //Pump Relay
   Serial.begin(SERIAL_SPEED);
+  digitalWrite(en, HIGH);
   
-  // Set the navigation mode (Airborne, 1G)
-  Serial.print("Setting uBlox nav mode: ");
-  uint8_t setNav[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00, 0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC};
-  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
-  
-  //Turning off all GPS NMEA strings apart from GPGGA on the uBlox modules
+    //Turning off all GPS NMEA strings apart from GPGGA on the uBlox modules
   Serial.print("$PUBX,40,GLL,0,0,0,0*5C\r\n");
   Serial.print("$PUBX,40,ZDA,0,0,0,0*44\r\n");
   Serial.print("$PUBX,40,VTG,0,0,0,0*5E\r\n");
   Serial.print("$PUBX,40,GSV,0,0,0,0*59\r\n");
   Serial.print("$PUBX,40,GSA,0,0,0,0*4E\r\n");
+  delay(2000);
+  // Set the navigation mode (Airborne, 1G)
+  rtty_txstring("Setting uBlox nav mode: ");
+  sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+  delay(100);
+  if(getUBXNAV5() != 6) {
+    sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+      rtty_txstring("Resending UBX Command");  
+  }
+  else {
+    rtty_txstring("Ublox in Airborne Mode"); 
+  }
+  
 
   //
   digitalWrite(led, HIGH);
-  digitalWrite(en, HIGH);
+
   digitalWrite(pump_relay, HIGH);
   delay(2000);
   Serial.println("Starting Up...");
@@ -427,8 +481,13 @@ void loop()
         
         // Check to see that we aren't all ready dropping ballast and make sure that enough time has passed  
         if(ballastmode == 0 && total_float_time > 600 && totalPumpMls > 0){
-         ballastmode = 1;
-         startBallast();
+          if(totalPumpMls <= 400 && ialt > 30000) {
+            ballastmode = 0;
+          }
+          else {
+           ballastmode = 1;
+           startBallast();
+          }
         }
  
          //This is the emergency ballast dump - If we find that we are decending then it does a crazy ballast dump slightly to test the tanks but also it 'might' rescue the payload
@@ -524,6 +583,20 @@ void loop()
     digitalWrite(led, LOW);
   }
   if (nogps_count > 1000) {
+    if(gpsairborne >=20) {
+        if(getUBXNAV5() != 6) {
+          rtty_txstring("Resending UBX Command"); 
+          sendUBX(setNav, sizeof(setNav)/sizeof(uint8_t));
+          gpsairborne = 0;
+        }
+        else {
+          rtty_txstring("Ublox in Airborne Mode"); 
+          gpsairborne = 0;
+        }
+    }
+    else {
+      gpsairborne++;
+    }
     temp0 = getTempdata(address1);
     delay(100);
     temp1 = getTempdata(address2);
