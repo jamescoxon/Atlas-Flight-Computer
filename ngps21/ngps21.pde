@@ -235,14 +235,14 @@ void calc_ascentrate() {
 	if(currenttime > ARtime) {
 	  diff_sec = currenttime - ARtime;
 	  diff_alt = ialt - last_alt;
-	  Serial.print("Diff sec = ");
-          Serial.print(diff_sec);
-          Serial.print(", Diff alt = ");
-          Serial.println(diff_alt);
+	  //Serial.print("Diff sec = ");
+          //Serial.print(diff_sec);
+          //Serial.print(", Diff alt = ");
+          //Serial.println(diff_alt);
 	  if (diff_sec > 60) {
 		ascentrate = (float) diff_alt / diff_sec;
-		Serial.print("Ascentrate: ");
-                Serial.println(ascentrate);
+		//Serial.print("Ascentrate: ");
+                //Serial.println(ascentrate);
 		ARtime = currenttime;
 		last_alt = ialt;
 	  }
@@ -251,8 +251,8 @@ void calc_ascentrate() {
 	  ARtime = currenttime;
 	  last_alt = ialt;
 	}
-	  Serial.print("Time: ");
-          Serial.println(currenttime);
+	  //Serial.print("Time: ");
+          //Serial.println(currenttime);
   }
 }
 
@@ -261,7 +261,7 @@ void floatdetection()
 	//Calculate if we have achieved float, monitor ascentrate if between +1 and -1 start float time if it strays out of +1 or -1 for more then 5 cycles - float has stopped
 	//Detect float
 	if (ascentrate < 1 && ascentrate > -1 && ialt > 15000) {
-	Serial.print("Floating... ");
+	//Serial.print("Floating... ");
 	//Now that we are at float we need to keep track of how long
 	  if (currenttime >= Floatstart) {
 		//Start Timer or Continue Timer
@@ -269,25 +269,25 @@ void floatdetection()
 			Floatstart = currenttime;
 			atfloat = 10;
 			float_time = 1 ;
-			Serial.print("Start float timer ");
-                        Serial.println(atfloat);
+			//Serial.print("Start float timer ");
+                        //Serial.println(atfloat);
 			}
 		else {
 			atfloat = 10;
 			float_time = (long) currenttime - Floatstart;
 			total_float_time = (long)float_time + Float_rollover_time;
-			Serial.print("Float Time: ");
-                        Serial.print(total_float_time);
-                        Serial.print(" ");
-                        Serial.println(atfloat);
+			//Serial.print("Float Time: ");
+                        //Serial.print(total_float_time);
+                        //Serial.print(" ");
+                        //Serial.println(atfloat);
 		}
 	}
 	  else if (currenttime < Floatstart) {
 		atfloat = 10;
 		//We must have rolled over 24hrs
 		Float_rollover_time = float_time;
-		Serial.print("Rollover: ");
-                Serial.println(Float_rollover_time);
+		//Serial.print("Rollover: ");
+                //Serial.println(Float_rollover_time);
 		Floatstart = currenttime;
 	}
 	}
@@ -299,17 +299,17 @@ void floatdetection()
 			//in case this is just a blip continue float counter until we run out
 			float_time = currenttime - Floatstart;
 			total_float_time = float_time + Float_rollover_time;
-			Serial.print("Float Time: ");
-                        Serial.print(total_float_time);
-                        Serial.print(" ");
-                        Serial.println(atfloat);
+			//Serial.print("Float Time: ");
+                        //Serial.print(total_float_time);
+                        //Serial.print(" ");
+                        //Serial.println(atfloat);
 			}
 		else {
 		  float_time = 0;
                   total_float_time = 0;
 		}
-		Serial.print("No Float: ");
-                Serial.println(atfloat);
+		//Serial.print("No Float: ");
+                //Serial.println(atfloat);
 	}
 }
 
@@ -431,7 +431,7 @@ void setup()
 
   digitalWrite(pump_relay, HIGH);
   delay(2000);
-  Serial.println("Starting Up...");
+  //Serial.println("Starting Up...");
   digitalWrite(pump_relay, LOW);
   digitalWrite(led, LOW);
 }
@@ -445,7 +445,7 @@ void loop()
     {
       // retrieves +/- lat/long in 100000ths of a degree
       if (fix_age == TinyGPS::GPS_INVALID_AGE) {
-          //Serial.println("No fix detected");
+          ////Serial.println("No fix detected");
       }
       else {
         //Get Data from GPS library
@@ -529,7 +529,7 @@ void loop()
             pumpMls = (float) pumpCount * 0.26; //
             //Total up ballast this dump
             thisDumpMls = thisDumpMls + (int) pumpMls;
-            Serial.print(pumpCount); Serial.print(",");Serial.print(pumpMls); Serial.print(","); Serial.println(thisDumpMls);
+            //Serial.print(pumpCount); //Serial.print(",");//Serial.print(pumpMls); //Serial.print(","); //Serial.println(thisDumpMls);
             pumpCount = 0; //Zeroing counter
           //Should we stop dumping ballast?
           if(ballastmode == 4) {
@@ -565,7 +565,7 @@ void loop()
           n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
           n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
           rtty_txstring(superbuffer);
-          Serial.println(superbuffer);
+          //Serial.println(superbuffer);
         }
         count++;
         delay(100);
@@ -610,7 +610,7 @@ void loop()
         n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
         n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
         rtty_txstring(superbuffer);
-        Serial.println(superbuffer);
+        //Serial.println(superbuffer);
       }
       nogps_ballast = 0;
     }
@@ -620,11 +620,11 @@ void loop()
             n = sprintf (checksum, "*%02X\n",gps_checksum(superbuffer));
             n = sprintf (superbuffer, "%s%s", superbuffer, checksum);
             rtty_txstring(superbuffer);
-            Serial.println(superbuffer);
+            //Serial.println(superbuffer);
       }
     }
     nogps_count = 0;
     nogps_ballast++;
-    Serial.println(nogps_ballast);
+    //Serial.println(nogps_ballast);
   }
 }
