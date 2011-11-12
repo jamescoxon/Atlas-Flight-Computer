@@ -1,7 +1,6 @@
 // I/O Pins
-int ledPin =  7;    // red led connected to digital pin 6
-int txPin = 3; // radio tx line
-int radioPin = 4; //radio En line
+int ledPin =  6;    // red led connected to digital pin 6
+int txPin = 13; // radio tx line
 
 int loopcount = 0, cycle = 0, j, q, n, totalloop = 0;
 
@@ -228,63 +227,26 @@ void hellsendmsg(char *str)
 
 void setup()
 {
-  Serial.begin(4800);	     // start serial for output
+  Serial.begin(9600);	     // start serial for output
   Serial.println("Starting..."); 
   pinMode(ledPin, OUTPUT);
   pinMode(txPin, OUTPUT);
-  pinMode(radioPin, OUTPUT);
+  pinMode(A2, OUTPUT);
   digitalWrite(ledPin, HIGH);
   delay(2000);
   digitalWrite(ledPin,LOW);
+  Serial.println("Done");
 }
 
 void loop()
 {  
   //Tx Stuff
-if (loopcount < 4) {
-  loopcount++;
-  switch(loopcount) {
-  case 1:
-    digitalWrite(radioPin, HIGH);
-    delay(1000);
-    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,1/3,HIGH,ALTITUDE,BALLOON", totalloop);
-    if (n > -1){
-      sendmsg(superbuffer);
-      delay(1000);
-      hellsendmsg(superbuffer);
-    }
-    digitalWrite(radioPin, LOW);
-    delay(60000);
-    break;
-  case 2:
-    digitalWrite(radioPin, HIGH);
-    delay(1000);
-    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,2/3,RTTY,434.075,ASCII8,50,350,0,1.5", totalloop);
-    if (n > -1){
-      sendmsg(superbuffer);
-      delay(1000);
-      hellsendmsg(superbuffer);
-    }
-    digitalWrite(radioPin, LOW);
-    delay(60000);
-    break;
-  case 3:
-    digitalWrite(radioPin, HIGH);
-    delay(1000);
-    n=sprintf (superbuffer, "VVVVV,ATLAS,%d,3/3,WWW.SPACENEAR.US/TRACKER/", totalloop);
-    if (n > -1){
-      sendmsg(superbuffer);
-      delay(1000);
-      hellsendmsg(superbuffer);
-    }
-    digitalWrite(radioPin, LOW);
-    delay(60000);
-    break;
-}
-}
-else if (loopcount > 3) {
-    loopcount = 0;
-    totalloop++;
-    delay(900000);
-  }
+  digitalWrite(A2, HIGH);
+  delay(1000);
+  Serial.println("VVVVV,ATLAS,1/3,HIGH,ALTITUDE,BALLOON");
+  sendmsg("VVVVV,ATLAS,1/3,HIGH,ALTITUDE,BALLOON");
+  delay(1000);
+  hellsendmsg("VVVVV,ATLAS,1/3,HIGH,ALTITUDE,BALLOON");
+  digitalWrite(A2, LOW);
+  delay(2000);
 }
