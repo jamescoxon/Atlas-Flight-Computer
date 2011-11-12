@@ -1,3 +1,18 @@
+/*
+Arduino code used on Atlas flight computer for the Atlas3 flight 11/11/11
+Payload consisted of:
+ * Atlas PCB
+ * ATmega328
+ * Radiometrix NTX2 10mW 434.075Mhz
+ * GPSbee (Ublox 5) GPS
+ * 3x DS18b20 temp sensors
+ * Photodiode
+Flight reached 37033m altitude before descending by parachute and landing
+in the North Sea.
+
+Code by James Coxon (jacoxon@googlemail.com) based on previous code as well
+as Arduino examples
+*/
 #include <TinyGPS.h>
 #include <OneWire.h>
 #include <stdio.h>
